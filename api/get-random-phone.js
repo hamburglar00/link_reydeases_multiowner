@@ -2,10 +2,13 @@
 // ✅ API GENÉRICA
 // ✅ agency ES OBLIGATORIO (?agency=XX)
 // ❌ NO defaults
+// ✅ Plan A/B/C/D
+// ✅ Lee desde load.whatsapp
 
 const CONFIG = {
   BRAND_NAME: "Rey de Ases",
 
+  // Soporte (Plan D)
   SUPPORT_FALLBACK_ENABLED: false,
   SUPPORT_FALLBACK_NUMBER: "",
 
@@ -15,13 +18,14 @@ const CONFIG = {
   UPSTREAM_BASE: "https://api.asesadmin.com/api/v1",
 };
 
+// Cache por agency (memoria serverless)
 let LAST_GOOD_BY_AGENCY = Object.create(null);
 
 const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function normalizePhone(raw) {
   let phone = String(raw || "").replace(/\D+/g, "");
-  if (phone.length === 10) phone = "54" + phone;
+  if (phone.length === 10) phone = "54" + phone; // AR
   if (!phone || phone.length < 8) return null;
   return phone;
 }
@@ -30,6 +34,7 @@ async function fetchJsonWithTimeout(url, timeoutMs) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   const started = Date.now();
+
   try {
     const res = await fetch(url, {
       headers: { "Cache-Control": "no-store" },
@@ -89,8 +94,9 @@ export default async function handler(req, res) {
 
     if (!data) throw new Error("Upstream no respondió");
 
-    const normalList = Array.isArray(data?.whatsapp) ? data.whatsapp : [];
-    if (!normalList.length) throw new Error("whatsapp vacío");
+    // PLAN B: load.whatsapp
+    const normalList = Array.isArray(data?.load?.whatsapp) ? data.load.whatsapp : [];
+    if (!normalList.length) throw new Error("load.whatsapp vacío");
 
     const rawPhone = pickRandom(normalList);
     const phone = normalizePhone(rawPhone);
@@ -98,7 +104,7 @@ export default async function handler(req, res) {
 
     const meta = {
       agency_id: agencyId,
-      source: "whatsapp",
+      source: "load.whatsapp",
       ts: new Date().toISOString(),
       normal_len: normalList.length,
     };
